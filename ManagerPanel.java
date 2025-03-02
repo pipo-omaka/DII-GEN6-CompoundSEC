@@ -5,6 +5,7 @@ import java.util.List;
 import java.time.LocalDateTime;
 
 
+
 public class ManagerPanel {
     private JFrame frame;
     private AccessControlSystem system;
@@ -93,7 +94,7 @@ public class ManagerPanel {
                 return;
             }
 
-            String level = floor + ":" + room;  // สร้าง level ใหม่ที่ต้องการเพิ่ม
+            String level ="Floor "+ floor + " - "+"Room " + room;  // สร้าง level ใหม่ที่ต้องการเพิ่ม
 
             List<String> accessLevels = card.getAccessLevels();
 
@@ -158,7 +159,7 @@ public class ManagerPanel {
             }
 
             // ระบุระดับสิทธิ์ที่ต้องการลบ
-            String level = floor + ":" + room;
+            String level ="Floor "+ floor + " - "+"Room " + room;
 
             // เพิ่มการดีบักเพื่อเช็คค่าก่อนการลบ
             System.out.println("Before removal: " + card.getAccessLevels());
@@ -295,7 +296,7 @@ public class ManagerPanel {
             String room = roomField.getText().trim();
 
             // แปลงข้อมูล level, floor, room เป็น newLevel ที่ใช้ใน accessLevels
-            String newLevel = floor + " - " + room; // สร้างรูปแบบใหม่
+            String newLevel ="Floor "+ floor + " - "+"Room " + room; // สร้างรูปแบบใหม่
 
             // ลบสิทธิ์เก่าออก (ถ้ามี)
             List<String> accessLevels = card.getAccessLevels();
@@ -306,11 +307,11 @@ public class ManagerPanel {
             card.setAccessLevels(accessLevels);  // อัปเดตการ์ด
 
             // อัปเดตข้อมูลในระบบ
-            this.updateCardInSystem(cardID, card); // อัปเดตข้อมูลกลับไปยังระบบ
+            system.updateCardInSystem(cardID, card); // อัปเดตข้อมูลกลับไปยังระบบ
 
             // บันทึกการเปลี่ยนแปลงใน log
-            logCardChange(cardID, "MODIFY", "Previous level removed, New level -> " + newLevel, "ADMIN001");
-            logEvent("🔄 Access level changed for card: " + cardID + " to " + newLevel);
+            system.logCardChange(cardID, "MODIFY", "Previous level removed, New level -> " + newLevel, "ADMIN001");
+            system.logEvent("🔄 Access level changed for card: " + cardID + " to " + newLevel);
 
             JOptionPane.showMessageDialog(frame, "แก้ไขบัตรสำเร็จ!");
             updateCardList();  // รีเฟรชข้อมูลใน UI

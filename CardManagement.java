@@ -1,19 +1,19 @@
 
 // Class to manage access cards
-public class CardManager {
-    private static CardManager instance;
+public class CardManagement {
+    private static CardManagement instance;
     private AccessControlSystem accessControlSystem;
 
-    private CardManager(AccessControlSystem accessControlSystem) {
+    private CardManagement(AccessControlSystem accessControlSystem) {
         this.accessControlSystem = accessControlSystem;
     }
 
 
-    public static CardManager getInstance() {
+    public static CardManagement getInstance() {
         if (instance == null) {
-            synchronized (CardManager.class) {
+            synchronized (CardManagement.class) {
                 if (instance == null) {
-                    instance = new CardManager(new AccessControlSystem());
+                    instance = new CardManagement(new AccessControlSystem());
                 }
             }
         }
