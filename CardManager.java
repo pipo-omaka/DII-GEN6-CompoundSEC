@@ -20,21 +20,21 @@ public class CardManager {
         return instance;
     }
 
-    public void addCard(AccessCard card) {
-        accessControlSystem.registerCard(card);
-    }
+//    public void addCard(AccessCard card) {
+//        accessControlSystem.registerCard(card);
+//    }
+//
+//    public void removeCard(String cardID) {
+//        accessControlSystem.modifyCard(cardID, "REVOKE", "");
+//    }
+//
+//    public void modifyCardAccess(String cardID, String action, String level) {
+//        accessControlSystem.modifyCard(cardID, action, level);
+//    }
 
-    public void removeCard(String cardID) {
-        accessControlSystem.modifyCard(cardID, "REVOKE", "");
-    }
-
-    public void modifyCardAccess(String cardID, String action, String level) {
-        accessControlSystem.modifyCard(cardID, action, level);
-    }
-
-    public boolean validateCardAccess(String cardID, String level, String inputPin) {
-        return accessControlSystem.validateAccess(cardID, level, inputPin);
-    }
+//    public boolean validateCardAccess(String cardID, String level, String inputPin) {
+//        return accessControlSystem.validateAccess(cardID, level, inputPin);
+//    }
 
 //    public void addZone(Zone zone) {
 //        accessControlSystem.addZone(zone);
