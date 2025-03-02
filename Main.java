@@ -4,6 +4,7 @@ import javax.swing.SwingUtilities;
 public class Main {
     public static void main(String[] args) {
 
+
 //        \======================Access and Add Access++++++++++++++++++++++++++/
 
 //        AccessControlSystem system = new AccessControlSystem();
@@ -105,23 +106,57 @@ public class Main {
 
         TimeBasedAccessCard managerCard = new TimeBasedAccessCard("ADMIN001", "1234", LocalDateTime.now().plusDays(30));
         managerCard.addAccessLevel("Manager");
-//        managerCard.addAccessLevel("Admin");
+        managerCard.addAccessLevel("Floor 1 - Room 101");  // ✅ เพิ่มสิทธิ์เข้า Floor 1 Room 101
         system.registerCard(managerCard);
 
         TimeBasedAccessCard guestCard1 = new TimeBasedAccessCard("GUEST001", "5678", LocalDateTime.now().plusDays(10));
         guestCard1.addAccessLevel("Low Floor");
+        guestCard1.addAccessLevel("Floor 1 - Room 102"); // ✅ เพิ่มสิทธิ์เข้า Floor 1 Room 102
         system.registerCard(guestCard1);
 
         TimeBasedAccessCard guestCard2 = new TimeBasedAccessCard("GUEST002", "5678", LocalDateTime.now().plusDays(10));
         guestCard2.addAccessLevel("Medium Floor");
+        guestCard2.addAccessLevel("Floor 2 - Room 201"); // ✅ เพิ่มสิทธิ์เข้า Floor 2 Room 201
         system.registerCard(guestCard2);
 
+        system.displayCardChanges("ADMIN001");
         SwingUtilities.invokeLater(() -> new AccessControlGUI(system));
         System.out.println("Manager Access Levels: " + managerCard.getAccessLevels());
 
 
 
 
+
+
+
+
+//        // Create a new access card
+//        TimeBasedAccessCard card1 = new TimeBasedAccessCard("CARD123","1234", LocalDateTime.now().plusDays(30));
+//        card1.addAccessLevel("Low Floor");
+//
+//        // Register the card in the system
+//        system.registerCard(card1);
+//
+//        // Modify permissions
+//        system.modifyCard("CARD123", "REVOKE", "Low Floor");
+//
+//        // Validate access
+//        System.out.println("Access Granted? " + system.validateAccess("CARD123", "Medium Floor"));
+//
+//        // Show audit logs
+//        system.showAuditLogs();
+
+
+//        //add && edit
+//        Card a = new Card("a","123", "Manager");
+//
+//        System.out.println(a.getPrivateCode("a", "123"));
+//
+//        System.out.println(a.getStatus());
+//
+//        a.setStatus("Employee");
+//
+//        System.out.println(a.getStatus());
 
 
     }
