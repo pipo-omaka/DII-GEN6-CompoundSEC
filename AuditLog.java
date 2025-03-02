@@ -6,9 +6,9 @@ import java.util.List;
 public class AuditLog {
     private List<String> logs;
 
-    public AuditLog() {
-        this.logs = new ArrayList<>();
-    }
+//    public AuditLog() {
+//        this.logs = new ArrayList<>();
+//    }
 
     public void logEvent(String event) {
         logs.add(LocalDateTime.now() + " - " + event);

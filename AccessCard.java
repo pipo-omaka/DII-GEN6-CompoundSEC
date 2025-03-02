@@ -3,14 +3,16 @@ import java.util.*;
 import java.util.List;  // ใช้ java.util.List สำหรับเก็บข้อมูล
 import java.util.ArrayList;
 
+
 //====== Base Class ======
 abstract class AccessCard {
     private String cardID;
     private String pin;
     private List<String> accessLevels;
-
+    private List<String> facadeIDs;
     private LocalDateTime expiryDate;
     private String accessLevelCategory;
+
 
 
     public AccessCard(String cardID, String pin, LocalDateTime expiryDate) {
@@ -18,6 +20,7 @@ abstract class AccessCard {
         this.pin = pin;
         this.expiryDate = expiryDate;
         this.accessLevels = new ArrayList<>();
+        this.facadeIDs = new ArrayList<>();
     }
 
     public void setAccessLevels(List<String> accessLevels) {
@@ -75,9 +78,29 @@ abstract class AccessCard {
         }
     }
 
-    public boolean hasAccess(String level, String inputPin) {
-        return validatePIN(inputPin) && accessLevels.contains(level) && LocalDateTime.now().isBefore(expiryDate);
+    public void addFacadeID(String facadeID) {
+        if (!facadeIDs.contains(facadeID)) {
+            facadeIDs.add(facadeID);
+        }
     }
+
+    public List<String> getFacadeIDs() {
+        return facadeIDs;
+    }
+
+    public boolean hasAccess(String level, String inputPin, String facadeID) {
+        if (this instanceof TimeBasedAccessCard) {
+            // เข้ารหัสข้อมูลการ์ดตามเวลา
+            encryptCardData();  // ทำการเข้ารหัส
+            System.out.println("Encrypted Card Data: " + ((TimeBasedAccessCard) this).getEncryptedData());
+        }
+
+        // ตรวจสอบ PIN และสิทธิ์การเข้าถึงตามระดับและ Facade ID
+        return validatePIN(inputPin) && accessLevels.contains(level) && facadeIDs.contains(facadeID) && LocalDateTime.now().isBefore(expiryDate);
+    }
+
+
+
 
     @Override
     public String toString() {
@@ -102,12 +125,13 @@ class TemporaryPermissionDecorator extends AccessCard {
 
 
     @Override
-    public boolean hasAccess(String level, String inputPin) {
+    public boolean hasAccess(String level, String inputPin, String facadeID) {
         if (LocalDateTime.now().isBefore(expiry) && level.equals(tempPermission)) {
             return true;
         }
-        return decoratedCard.hasAccess(level, inputPin);
+        return decoratedCard.hasAccess(level, inputPin, facadeID);
     }
+
 
     @Override
     public void encryptCardData() {
@@ -125,6 +149,7 @@ class TimeBasedAccessCard extends AccessCard {
 
     @Override
     public void encryptCardData() {
+        // การเข้ารหัสที่สามารถเปลี่ยนแปลงได้ตามเวลา
         this.encryptedData = "Encrypted:" + getCardID() + "@" + getExpiryDate().toString();
     }
 
@@ -133,7 +158,8 @@ class TimeBasedAccessCard extends AccessCard {
     }
 }
 
-//====== Strategy Pattern for Authentication ======
+
+//====== Strategy Pattern for Authentication ======❗️ใช้ตรวจสอบสิทธิ์นโยบายของบัตร
 interface AccessVerificationStrategy {
     boolean verify(AccessCard card, String level, String inputPin);
 }
@@ -142,17 +168,12 @@ interface AccessVerificationStrategy {
 class BasicAuthentication implements AccessVerificationStrategy {
     @Override
     public boolean verify(AccessCard card, String level, String inputPin) {
-        return card.hasAccess(level, inputPin);
+        return card.hasAccess(level, inputPin, "DEFAULT_FACADE_ID");
     }
 }
 
-//// Concrete Strategy 2: Multi-Factor Authentication
-//class MultiFactorAuthentication implements AccessVerificationStrategy {
-//    @Override
-//    public boolean verify(AccessCard card, String level, String inputPin) {
-//        return card.hasAccess(level, inputPin) && Math.random() > 0.5; // 50% โอกาสสำเร็จ
-//    }
-//}
+
+
 
 //====== Access Control System ======
 class AccessControlSystem {
@@ -294,11 +315,10 @@ class AccessControlSystem {
         }
     }
 
-
-
     public void changePin(String cardID, String newPin, String adminID) {
         AccessCard card = registeredCards.get(cardID);
         if (card != null) {
+            card.setPin(newPin);  // อย่าลืมอัปเดต PIN ในข้อมูลการ์ด
             logCardChange(cardID, "CHANGE_PIN", "New PIN set", adminID);
             logEvent("PIN changed for card: " + cardID);
         }
@@ -307,10 +327,12 @@ class AccessControlSystem {
     public void renewCard(String cardID, LocalDateTime newExpiryDate, String adminID) {
         AccessCard card = registeredCards.get(cardID);
         if (card != null) {
+            card.setExpiryDate(newExpiryDate);  // อย่าลืมอัปเดตวันหมดอายุ
             logCardChange(cardID, "RENEW", "Expiry extended to " + newExpiryDate, adminID);
             logEvent("Card renewed: " + cardID + ", new expiry: " + newExpiryDate);
         }
     }
+
 
 
     public void checkCard(String cardID) {
@@ -321,6 +343,19 @@ class AccessControlSystem {
             System.out.println("[ERROR] ไม่พบบัตร ID: " + cardID);
         }
     }
+
+    public boolean removeCard(String cardID) {
+        AccessCard card = registeredCards.remove(cardID);
+        if (card != null) {
+            logEvent("Card Removed: " + cardID);
+            return true;
+        } else {
+            logEvent("Failed to remove card: " + cardID);
+            return false;
+        }
+    }
+
+
 
     public void logEvent(String event) {
         auditLogs.add(LocalDateTime.now() + " - " + event);  // เพิ่มเหตุการณ์ลงใน auditLogs
@@ -358,49 +393,15 @@ class AccessControlSystem {
         // ตัวอย่างการพิมพ์ลงคอนโซล
         System.out.println("Log: " + logMessage);
     }
+
+    // ตัวอย่างการบันทึก log เมื่อมีการเข้าถึงระบบ
+    public void logAuditTrail(String action, String cardID, String details, String adminID) {
+        String logEntry = "Action: " + action + ", Card ID: " + cardID + ", Details: " + details + ", Admin ID: " + adminID + ", Time: " + LocalDateTime.now();
+        logEvent(logEntry);  // ใช้ logEvent ที่มีอยู่ในคลาสนี้แทน
+    }
+
+
+
 }
-
-
-
-
-
-//    public boolean validateAccess(String cardID, String level, String inputPin) {
-//        AccessCard card = registeredCards.get(cardID);
-//        if (card == null) {
-//            System.out.println("Card not found: " + cardID);
-//            return false;
-//        }
-//
-//        boolean access = strategy.verify(card, level, inputPin);
-//        logEvent("Access Attempt: Card " + cardID + " -> Level " + level + " -> " + (access ? "GRANTED" : "DENIED"));
-//        return access;
-//    }
-//
-//    public void addZone(String zoneID, String zoneName) {
-//        zones.put(zoneID, zoneName);
-//        logEvent("Zone Added: " + zoneName);
-//    }
-//
-//    public String getZone(String zoneID) {
-//        return zones.get(zoneID);
-//    }
-//
-//    private void logEvent(String event) {
-//        auditLogs.add(LocalDateTime.now() + " - " + event);
-//    }
-//
-//    public void showAuditLogs() {
-//        auditLogs.forEach(System.out::println);
-//    }
-//
-//    public String getAuditLogs() {
-//        return String.join("\n", auditLogs);
-//    }
-//
-//}
-
-
-
-
 
 

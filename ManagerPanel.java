@@ -3,6 +3,7 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.List;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 
 
 
@@ -36,6 +37,18 @@ public class ManagerPanel {
         frame.setVisible(true);
     }
 
+    public boolean isCardValidWithinTime(AccessCard card) {
+        LocalDateTime currentTime = LocalDateTime.now();
+        return !card.getExpiryDate().isBefore(currentTime);
+    }
+
+    public boolean canAccess(AccessCard card, String floor, String room) {
+        List<String> levels = card.getAccessLevels();
+        String requiredLevel = "Floor " + floor + " - Room " + room;
+        return levels.contains(requiredLevel) && isCardValidWithinTime(card);
+    }
+
+
 
     // 🔹 ฟังก์ชันอัปเดตตารางข้อมูลบัตร
     private void updateCardList() {
@@ -54,7 +67,6 @@ public class ManagerPanel {
             }
         }
     }
-
 
 
     // 🔹 ฟังก์ชันเพิ่มสิทธิ์ให้บัตร
@@ -94,7 +106,7 @@ public class ManagerPanel {
                 return;
             }
 
-            String level ="Floor "+ floor + " - "+"Room " + room;  // สร้าง level ใหม่ที่ต้องการเพิ่ม
+            String level = "Floor " + floor + " - " + "Room " + room;  // สร้าง level ใหม่ที่ต้องการเพิ่ม
 
             List<String> accessLevels = card.getAccessLevels();
 
@@ -159,7 +171,7 @@ public class ManagerPanel {
             }
 
             // ระบุระดับสิทธิ์ที่ต้องการลบ
-            String level ="Floor "+ floor + " - "+"Room " + room;
+            String level = "Floor " + floor + " - " + "Room " + room;
 
             // เพิ่มการดีบักเพื่อเช็คค่าก่อนการลบ
             System.out.println("Before removal: " + card.getAccessLevels());
@@ -194,13 +206,6 @@ public class ManagerPanel {
         }
     }
 
-
-
-
-
-
-
-
     private void checkCardInformation() {
         String cardID = JOptionPane.showInputDialog(frame, "กรุณากรอกรหัสการ์ด:");
         if (cardID == null || cardID.trim().isEmpty()) return;
@@ -224,29 +229,23 @@ public class ManagerPanel {
         }
     }
 
+    // ฟังก์ชันตรวจสอบการเปลี่ยนแปลงของการ์ด
     private void checkCardChanges() {
-        String cardID = JOptionPane.showInputDialog(frame, "กรุณากรอกรหัสการ์ด:");
-        if (cardID == null || cardID.trim().isEmpty()) return;
-
-        List<String> changesLog = system.getCardChangesLog(cardID);  // ดึงข้อมูล log ของการ์ดนี้
-
-        if (changesLog.isEmpty()) {
-            JOptionPane.showMessageDialog(frame, "ไม่มีข้อมูลการเปลี่ยนแปลงสำหรับการ์ดนี้", "ข้อมูลการเปลี่ยนแปลง", JOptionPane.INFORMATION_MESSAGE);
-        } else {
-            StringBuilder logDetails = new StringBuilder();
-            logDetails.append("<html><b>ข้อมูลการเปลี่ยนแปลง:</b><br>");
-            for (String log : changesLog) {
-                logDetails.append(log).append("<br>");
+        // Example to show changes for selected card.
+        String cardID = JOptionPane.showInputDialog(frame, "กรุณากรอกรหัสการ์ดที่ต้องการตรวจสอบการเปลี่ยนแปลง:");
+        if (cardID != null) {
+            List<String> logs = system.getCardChangesLog(cardID);
+            if (logs != null && !logs.isEmpty()) {
+                StringBuilder logText = new StringBuilder();
+                for (String log : logs) {
+                    logText.append(log).append("\n");
+                }
+                JOptionPane.showMessageDialog(frame, logText.toString(), "Change Logs", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(frame, "ไม่มีการเปลี่ยนแปลงที่บันทึกสำหรับการ์ดนี้", "Change Logs", JOptionPane.INFORMATION_MESSAGE);
             }
-            logDetails.append("</html>");
-
-            JOptionPane.showMessageDialog(frame, logDetails.toString(), "ข้อมูลการเปลี่ยนแปลง", JOptionPane.INFORMATION_MESSAGE);
         }
     }
-
-
-
-
 
 
     private void modifyAccessLevel() {
@@ -296,7 +295,7 @@ public class ManagerPanel {
             String room = roomField.getText().trim();
 
             // แปลงข้อมูล level, floor, room เป็น newLevel ที่ใช้ใน accessLevels
-            String newLevel ="Floor "+ floor + " - "+"Room " + room; // สร้างรูปแบบใหม่
+            String newLevel = "Floor " + floor + " - " + "Room " + room; // สร้างรูปแบบใหม่
 
             // ลบสิทธิ์เก่าออก (ถ้ามี)
             List<String> accessLevels = card.getAccessLevels();
@@ -315,12 +314,11 @@ public class ManagerPanel {
 
             JOptionPane.showMessageDialog(frame, "แก้ไขบัตรสำเร็จ!");
             updateCardList();  // รีเฟรชข้อมูลใน UI
+            // เพิ่มการบันทึกการเปลี่ยนแปลงในระบบ
+            system.logAuditTrail("MODIFY", cardID, "Changed access level to " + newLevel, "ADMIN001");
+
         }
     }
-
-
-
-
 
 
     private void showChangeLogs(String cardID) {
@@ -338,20 +336,32 @@ public class ManagerPanel {
     }
 
 
-
     private void showManagerOptions() {
         // สร้าง panel สำหรับปุ่ม
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));  // ตั้งแนวการจัดวางปุ่มเป็นแนวตั้ง
 
-        // สร้างปุ่มสามปุ่ม
+        // สร้างปุ่ม
+        JButton addCardButton = new JButton("เพิ่มการ์ด");
+        JButton deleteCardButton = new JButton("ลบการ์ด");
         JButton addAccessButton = new JButton("เพิ่มสิทธิ์");
         JButton revokeAccessButton = new JButton("ลบสิทธิ์");
         JButton modifyAccessButton = new JButton("แก้ไขสิทธิ์");
         JButton checkCardButton = new JButton("เช็คข้อมูลการ์ด");
         JButton checkChangesButton = new JButton("ตรวจสอบการเปลี่ยนแปลง");
 
+        // เพิ่ม Action Listener ให้กับปุ่ม
+        addCardButton.addActionListener(e -> addCard());
+        deleteCardButton.addActionListener(e -> deleteCard());
+        addAccessButton.addActionListener(e -> addAccessLevel());
+        revokeAccessButton.addActionListener(e -> revokeAccessLevel());
+        modifyAccessButton.addActionListener(e -> modifyAccessLevel());
+        checkCardButton.addActionListener(e -> checkCardInformation());
+        checkChangesButton.addActionListener(e -> checkCardChanges());
+
         // เพิ่มปุ่มลงใน panel
+        panel.add(addCardButton);
+        panel.add(deleteCardButton);
         panel.add(addAccessButton);
         panel.add(revokeAccessButton);
         panel.add(modifyAccessButton);
@@ -361,14 +371,108 @@ public class ManagerPanel {
         // สร้าง JScrollPane สำหรับ scroll
         JScrollPane scrollPane = new JScrollPane(panel);
         frame.add(scrollPane, BorderLayout.CENTER);  // ใส่ panel ลงใน frame
-
-        // ฟังก์ชันที่เรียกใช้งานเมื่อกดปุ่ม
-        addAccessButton.addActionListener(e -> addAccessLevel());  // เพิ่มสิทธิ์
-        revokeAccessButton.addActionListener(e -> revokeAccessLevel());
-        modifyAccessButton.addActionListener(e -> modifyAccessLevel());  // แก้ไขสิทธิ์
-        checkCardButton.addActionListener(e -> checkCardInformation());
-        checkChangesButton.addActionListener(e -> checkCardChanges()); // เช็คข้อมูลการ์ด
     }
+
+
+    private void addCard() {
+        // สร้าง panel สำหรับกรอกข้อมูล
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));  // ตั้งแนวการจัดวางปุ่มเป็นแนวตั้ง
+
+        // ข้อมูลการ์ด
+        JTextField cardIdField = new JTextField();
+        panel.add(new JLabel("กรุณากรอกรหัสการ์ด:"));
+        panel.add(cardIdField);
+
+        // PIN
+        JTextField pinField = new JTextField();
+        panel.add(new JLabel("กรุณากรอกรหัส PIN:"));
+        panel.add(pinField);
+
+        // ชั้น
+        JTextField floorField = new JTextField();
+        panel.add(new JLabel("กรุณากรอกชั้น (Floor):"));
+        panel.add(floorField);
+
+        // ห้อง
+        JTextField roomField = new JTextField();
+        panel.add(new JLabel("กรุณากรอกห้อง (Room):"));
+        panel.add(roomField);
+
+        // ระดับการเข้าถึง (Access Level)
+        String[] accessLevelsUI = {"Low Floor", "Medium Floor", "High Floor"};
+        JComboBox<String> accessLevelCombo = new JComboBox<>(accessLevelsUI);
+        panel.add(new JLabel("กรุณาเลือกระดับการเข้าถึง:"));
+        panel.add(accessLevelCombo);
+
+        // วันหมดอายุ
+        JTextField expiryField = new JTextField();
+        panel.add(new JLabel("กรุณากรอกวันหมดอายุ (yyyy-mm-dd):"));
+        panel.add(expiryField);
+
+        // แสดงกรอบ UI
+        int result = JOptionPane.showConfirmDialog(frame, panel, "เพิ่มการ์ดใหม่", JOptionPane.OK_CANCEL_OPTION);
+
+        if (result == JOptionPane.OK_OPTION) {
+            // รับค่าจากฟอร์ม
+            String cardId = cardIdField.getText().trim();
+            String pin = pinField.getText().trim();
+            String floor = floorField.getText().trim();
+            String room = roomField.getText().trim();
+            String accessLevel = (String) accessLevelCombo.getSelectedItem();  // รับค่าระดับการเข้าถึง
+            String expiryDateStr = expiryField.getText().trim();
+
+            // ตรวจสอบข้อมูลที่กรอก
+            if (cardId.isEmpty() || pin.isEmpty() || floor.isEmpty() || room.isEmpty() || accessLevel.isEmpty() || expiryDateStr.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "กรุณากรอกข้อมูลให้ครบถ้วน", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // แปลงวันที่หมดอายุจาก String เป็น LocalDateTime
+            LocalDateTime expiryDate;
+            try {
+                expiryDate = LocalDateTime.parse(expiryDateStr + "T00:00:00");  // แปลง string เป็น LocalDateTime
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(frame, "รูปแบบวันที่ไม่ถูกต้อง!", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // สร้างการ์ดใหม่ในระบบ
+            String resultMessage = CardManagement.addCard(cardId, pin, floor, room, expiryDate);
+            JOptionPane.showMessageDialog(frame, resultMessage);
+
+            // เพิ่มการตั้งค่าการเข้าถึงใหม่ให้กับการ์ดที่เพิ่ม
+            AccessCard newCard = system.getCard(cardId);  // ดึงการ์ดที่เพิ่มจากระบบ
+            if (newCard != null) {
+                String newLevel = "Floor " + floor + " - Room " + room;
+                List<String> accessLevels = newCard.getAccessLevels();  // ดึง access levels ที่มีอยู่
+                if (accessLevels == null) {
+                    accessLevels = new ArrayList<>();  // หากไม่พบ accessLevels ให้สร้างใหม่
+                }
+                accessLevels.add(newLevel);  // เพิ่ม level ใหม่
+                newCard.setAccessLevels(accessLevels);  // อัปเดตการ์ด
+                system.updateCardInSystem(cardId, newCard);  // อัปเดตการ์ดในระบบ
+            }
+
+            // บันทึกการเปลี่ยนแปลง
+            system.logCardChange(cardId, "ADD", "Card Added", "ADMIN001");
+
+            // ให้สามารถตรวจสอบการเปลี่ยนแปลงการ์ดที่เพิ่มใหม่ได้
+            SwingUtilities.invokeLater(() -> {
+                updateCardList();  // รีเฟรชตารางการ์ด
+                JOptionPane.showMessageDialog(frame, "บัตรถูกเพิ่มเรียบร้อยแล้ว! คุณสามารถตรวจสอบข้อมูลการ์ดอื่นๆ ได้ทันที");
+            });
+        }
+    }
+
+    private void deleteCard() {
+        String cardId = JOptionPane.showInputDialog("กรุณากรอกรหัสการ์ดที่ต้องการลบ:");
+        if (cardId != null) {
+            String result = CardManagement.removeCard(cardId);
+            JOptionPane.showMessageDialog(frame, result);
+        }
+    }
+
 }
 
 
